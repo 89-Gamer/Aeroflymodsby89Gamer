@@ -515,6 +515,45 @@
     white-space: pre-line;
   }
   .notice-box strong { color: var(--gold); letter-spacing: 0.06em; text-transform: uppercase; font-size: 0.85rem; }
+  .video-cover { position: relative; }
+  .play-btn {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 78px;
+    height: 78px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-left: 6px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    background: var(--lg-fill), rgba(0, 10, 18, 0.42);
+    -webkit-backdrop-filter: var(--lg-blur);
+    backdrop-filter: var(--lg-blur);
+    box-shadow: var(--lg-rim), 0 10px 30px rgba(0, 0, 0, 0.45);
+    color: #fff;
+    font-size: 1.9rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: transform 0.4s var(--spring), background 0.3s ease;
+  }
+  .play-btn:hover, .play-btn:focus-visible {
+    transform: translate(-50%, -50%) scale(1.08);
+    background: var(--lg-fill-hover), rgba(0, 10, 18, 0.3);
+    outline: none;
+  }
+  .play-btn:active { transform: translate(-50%, -50%) scale(0.94); transition-duration: 0.15s; }
+  .video-frame {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border: 0;
+    border-radius: 16px;
+    background: #000;
+  }
+  .video-link { display: block; text-align: center; margin-top: 10px; color: var(--sky); font-size: 0.9rem; }
   .icon-cover {
     object-fit: contain !important;
     padding: 16%;
@@ -868,6 +907,8 @@
              With 2 or more pictures, arrow buttons appear to switch between them.
              The card on the main page uses  image  (the first picture).
    notice:   optional. A highlighted note shown above the buttons, like "Rename the file to ...".
+   video:    optional. A YouTube link, like "https://youtu.be/XXXXXXXXXXX". The picture in the
+             pop-up gets a play button; pressing it plays the video right there.
    iconCover: add  iconCover: true  when the picture is a plain black icon (like audio.png);
              it gets turned white and centred so it shows on the dark glass.
    maintenance: add  maintenance: true  to switch off this mod's download buttons.
@@ -881,7 +922,7 @@
              Add  paid: true  for Gumroad / paid links (they turn gold).
    ================================================================ */
 // Site version: shown at the bottom of the page. It goes up with every update.
-const SITE_VERSION = "4.1";
+const SITE_VERSION = "4.2";
 
 const categories = ["Scenery", "Pushback slots", "Liveries", "Audio"];
 
@@ -1181,6 +1222,18 @@ const mods = [
     ]
   },
   {
+    name: "Turkish Airlines Full Boarding Music and Safety Video Addon",
+    category: "Audio",
+    image: "turkish-boarding-safety.jpg",
+    video: "https://youtu.be/QgbvXFrP6Lg",
+    updated: "2026-11-15",
+    version: "1.0",
+    description: "Full Turkish Airlines boarding music and safety video add-on for Aerofly FS4 & FSG.\nThe full audio is 19 minutes long.\nPress play on the picture to watch the video.\nPut the downloaded file in Zk Mods folder for the plane you want for ex: A321",
+    links: [
+      { label: "Download (.tsb)", url: "https://drive.google.com/file/d/1eZczVXCIPHzjmTZDZsWfAH7ruP5t5uwJ/view?usp=drive_link" }
+    ]
+  },
+  {
     name: "Airbus A350 Turkish Airlines",
     category: "Liveries",
     comingSoon: true,
@@ -1435,6 +1488,35 @@ favBtn.addEventListener("click", () => {
 renderSidebar();
 renderGrid();
 
+function youtubeId(url) {
+  const m = String(url || "").match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/))([\w-]{11})/);
+  return m ? m[1] : null;
+}
+
+// the picture with a play button on it; pressing play shows the YouTube video in its place
+function buildVideoCover(mod) {
+  const id = youtubeId(mod.video);
+  const wrap = el("div", { className: "video-cover" });
+  const play = el("button", { type: "button", textContent: "\u25B6" });
+  play.className = "play-btn";
+  play.setAttribute("aria-label", "Play video");
+  play.title = "Play video";
+  play.addEventListener("click", () => {
+    const frame = el("iframe", {
+      src: "https://www.youtube-nocookie.com/embed/" + id + "?autoplay=1&rel=0",
+      title: mod.name + " video",
+      allowFullscreen: true
+    });
+    frame.className = "video-frame";
+    frame.setAttribute("allow", "autoplay; encrypted-media; picture-in-picture; fullscreen");
+    const link = el("a", { href: "https://www.youtube.com/watch?v=" + id, textContent: "Open on YouTube", target: "_blank", rel: "noopener" });
+    link.className = "video-link";
+    wrap.replaceChildren(frame, link);
+  });
+  wrap.append(picture(mod.image, mod.name, "modal-img", "modal-img-fallback"), play);
+  return wrap;
+}
+
 let galleryStep = null;
 
 function buildGallery(mod) {
@@ -1534,7 +1616,7 @@ function openMod(mod) {
     renderSidebar();
     renderGrid();
   });
-  modalContent.append(buildGallery(mod), body);
+  modalContent.append((mod.video && youtubeId(mod.video)) ? buildVideoCover(mod) : buildGallery(mod), body);
   if (!mod.comingSoon) modalContent.append(star);
   modal.showModal();
 }
@@ -1550,6 +1632,8 @@ document.addEventListener("pointermove", e => {
 });
 
 document.getElementById("closeBtn").addEventListener("click", () => modal.close());
+// emptying the pop-up when it closes also stops a playing video
+modal.addEventListener("close", () => modalContent.replaceChildren());
 
 // audio installation guide
 const guideModal = document.getElementById("guideModal");
