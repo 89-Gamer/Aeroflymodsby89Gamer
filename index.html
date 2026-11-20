@@ -1202,6 +1202,10 @@
              like "2026-10-18". Change it every time you release a new version.
    links:    each link has a label (button text) and a url.
              Add  paid: true  for Gumroad / paid links (they turn gold).
+             For ONE button that downloads several files at once, use  files: ["a.tsb", "b.tsb"]
+             instead of url.
+   noGuide:  add  noGuide: true  to an Audio mod to hide its "Rename the file" notice and the
+             Installation guide link.
    ================================================================ */
 // Site version: shown at the bottom of the page. It goes up with every update.
 const SITE_VERSION = "4.2";
@@ -1528,6 +1532,19 @@ const mods = [
     description: "Turkish Airlines safety announcement add-on for Aerofly FS4 & FSG.\nPress play on the picture to watch the video.\nPut the downloaded file in Zk Mods folder for the plane you want for ex: A321",
     links: [
       { label: "Download for Mobile & PC (.tsb)", url: "tksafetyannounce.tsb" }
+    ]
+  },
+  {
+    name: "Realistic Airbus A350 Flaps Sound",
+    category: "Audio",
+    image: "https://img.youtube.com/vi/ihGhO1GBMXI/maxresdefault.jpg",
+    video: "https://youtu.be/ihGhO1GBMXI",
+    updated: "2026-11-20",
+    version: "1.0",
+    noGuide: true,
+    description: "Realistic Airbus A350 flaps sound add-on for Aerofly FS4 & FSG.\nOne button downloads both files (left and right flaps).\nPress play on the picture to watch the video.\nAdd both files to the Zk Mods file and the A35K folder.",
+    links: [
+      { label: "Download Flaps Sound (.tsb)", files: ["flaps_left.tsb", "flaps_right.tsb"] }
     ]
   },
   {
@@ -1899,6 +1916,24 @@ function openMod(mod) {
       links.append(off);
       return;
     }
+    if (Array.isArray(l.files) && l.files.length) {
+      // one button that downloads several files at once
+      const multi = el("a", { href: l.files[0], textContent: l.label, rel: "noopener" });
+      multi.setAttribute("download", "");
+      multi.addEventListener("click", e => {
+        e.preventDefault();
+        l.files.forEach((f, i) => setTimeout(() => {
+          const t = document.createElement("a");
+          t.href = f;
+          t.setAttribute("download", "");
+          document.body.append(t);
+          t.click();
+          t.remove();
+        }, i * 400));
+      });
+      links.append(multi);
+      return;
+    }
     const a = el("a", { href: l.url, textContent: l.label, target: "_blank", rel: "noopener" });
     if (l.paid) a.classList.add("paid");
     if (!/^https?:/i.test(l.url)) { a.removeAttribute("target"); a.setAttribute("download", ""); }
@@ -1909,7 +1944,7 @@ function openMod(mod) {
   if (mod.price) body.append(el("p", { className: "price", textContent: mod.price }));
   body.append(el("p", { className: "desc", textContent: mod.description }));
   if (mod.notice) body.append(el("div", { className: "notice-box" }, [el("strong", { textContent: "Notice" }), " " + mod.notice]));
-  if (mod.category === "Audio" && !mod.comingSoon) {
+  if (mod.category === "Audio" && !mod.comingSoon && !mod.noGuide) {
     body.append(el("div", { className: "notice-box" }, [el("strong", { textContent: "Notice" }), " " + AUDIO_NOTICE]));
     const g = el("button", { type: "button", className: "guide-link", textContent: "Installation guide \u203a" });
     g.addEventListener("click", openGuide);
